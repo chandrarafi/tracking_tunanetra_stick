@@ -28,7 +28,8 @@ jobs:
             git config --global --add safe.directory ${{ secrets.WORK_DIR }}
             
             echo "Menarik kode terbaru dari Github (main branch)...."
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
             
             echo "Menginstall dependensi PHP Mode Production..."
             
