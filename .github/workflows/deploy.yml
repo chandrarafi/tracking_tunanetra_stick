@@ -1,0 +1,49 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS using SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Jika Anda menggunakan custom port untuk SSH (default 22), bisa ditambahkan:
+          # port: 22
+          script: |
+            # Pindah ke direktori project Anda di instance VPS (diambil dari Github Secrets WORK_DIR)
+            cd ${{ secrets.WORK_DIR }}
+            
+            echo "Menarik kode terbaru dari Github (main branch)...."
+            git pull origin main
+            
+            echo "Menginstall dependensi PHP Mode Production..."
+            # Asumsi composer.phar sudah ada secara global
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            
+            echo "Menginstall library Node.js & Mem-build React Vite..."
+            npm ci
+            npm run build
+            
+            echo "Menjalankan Migrasi Database..."
+            php artisan migrate --force
+            
+            echo "Mereset Cache Aplikasi..."
+            route:clear || echo 'no routes'
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            echo "Mereset Service Queue & Reverb..."
+            # Laravel otomatis mematikan listener saat ini agar process manager (Supervisor/systemd) merestartnya.
+            php artisan queue:restart || true
+            php artisan reverb:restart || true
+            
+            echo "🚀 DEPLOYMENT BERHASIL! APLIKASI TELAH DIPERBARUI."
