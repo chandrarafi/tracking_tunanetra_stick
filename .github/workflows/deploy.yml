@@ -18,6 +18,9 @@ jobs:
           # Jika Anda menggunakan custom port untuk SSH (default 22), bisa ditambahkan:
           # port: 22
           script: |
+            # Berhenti otomatis jika ada SATUPUN sintaks yang error
+            set -e
+            
             # Pindah ke direktori project Anda di instance VPS (diambil dari Github Secrets WORK_DIR)
             cd ${{ secrets.WORK_DIR }}
             
@@ -28,10 +31,12 @@ jobs:
             git pull origin main
             
             echo "Menginstall dependensi PHP Mode Production..."
-            composer install --no-dev --optimize-autoloader
+            # # Mem-bypass blokir putenv di WHM/aaPanel dan mengeksekusi instalasi
+            # php -d disable_functions="" $(which composer) install --no-interaction --prefer-dist --optimize-autoloader --no-dev
             
-            if [ ! -d "vendor" ]; then
-              echo "Error: Directory vendor tidak terbentuk! Berarti 'composer install' gagal."
+            # Pemeriksaan krusial: Pastikan engine Laravel terpasang
+            if [ ! -f "vendor/autoload.php" ]; then
+              echo "Error: File vendor/autoload.php tidak ditemukan! Instalasi Composer gagal fatal."
               exit 1
             fi
             
@@ -43,7 +48,7 @@ jobs:
             php artisan migrate --force
             
             echo "Mereset Cache Aplikasi..."
-            route:clear || echo 'no routes'
+            php artisan route:clear || echo 'no routes'
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
