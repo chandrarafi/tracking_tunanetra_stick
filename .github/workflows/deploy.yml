@@ -21,6 +21,9 @@ jobs:
             # Pindah ke direktori project Anda di instance VPS (diambil dari Github Secrets WORK_DIR)
             cd ${{ secrets.WORK_DIR }}
             
+            echo "Menambahkan direktori ke git safe.directory untuk menghindari error ownership..."
+            git config --global --add safe.directory ${{ secrets.WORK_DIR }}
+            
             echo "Menarik kode terbaru dari Github (main branch)...."
             git pull origin main
             
