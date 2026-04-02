@@ -31,8 +31,6 @@ jobs:
             git pull origin main
             
             echo "Menginstall dependensi PHP Mode Production..."
-            # # Mem-bypass blokir putenv di WHM/aaPanel dan mengeksekusi instalasi
-            # php -d disable_functions="" $(which composer) install --no-interaction --prefer-dist --optimize-autoloader --no-dev
             
             # Pemeriksaan krusial: Pastikan engine Laravel terpasang
             if [ ! -f "vendor/autoload.php" ]; then
