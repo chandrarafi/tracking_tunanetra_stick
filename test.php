@@ -1,2 +1,2 @@
 <?php
-echo"tes ci/cd";
+echo"tes ci/cd ok";
