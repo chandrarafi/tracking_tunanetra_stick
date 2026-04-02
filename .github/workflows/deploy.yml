@@ -28,8 +28,12 @@ jobs:
             git pull origin main
             
             echo "Menginstall dependensi PHP Mode Production..."
-            # Asumsi composer.phar sudah ada secara global
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            composer install --no-dev --optimize-autoloader
+            
+            if [ ! -d "vendor" ]; then
+              echo "Error: Directory vendor tidak terbentuk! Berarti 'composer install' gagal."
+              exit 1
+            fi
             
             echo "Menginstall library Node.js & Mem-build React Vite..."
             npm ci
