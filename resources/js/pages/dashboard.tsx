@@ -155,38 +155,63 @@ export default function Dashboard({ sensorEvents: initialSensorEvents, emergency
         setWarnings((prev) => prev.filter((w) => w.id !== id));
     }, []);
 
-    // Build map markers from events that have valid GPS
+    // Build map markers from events that have valid GPS, but prevent clustering overlaps
     const mapMarkers: MapMarker[] = useMemo(() => {
         const markers: MapMarker[] = [];
+        const seenLocations = new Set<string>();
+        
+        // Hitung batas waktu (2 menit yang lalu)
+        const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
 
-        sensorEvents.forEach((e) => {
+        // Process emergency events first so they take priority in drawing
+        emergencyEvents.forEach((e) => {
             if (e.lat && e.lng) {
-                markers.push({
-                    id: `sensor-${e.id}`,
-                    type: e.event,
-                    lat: Number(e.lat),
-                    lng: Number(e.lng),
-                    timestamp: e.created_at,
-                    isNew: newEventIds.has(`sensor-${e.id}`),
-                });
+                const eventDate = new Date(e.created_at);
+                const isFocused = focusLocation && focusLocation[0] === Number(e.lat) && focusLocation[1] === Number(e.lng);
+                
+                // Hanya tampilkan jika event berumur maksimal 2 menit, ATAU sedang di-klik (fokus) dari panel log
+                if (eventDate >= twoMinutesAgo || isFocused) {
+                    // Round to 5 decimal places (approx 1.1 meters) to dedup overlapping shadows
+                    const locKey = `E-${Number(e.lat).toFixed(5)}-${Number(e.lng).toFixed(5)}`;
+                    if (!seenLocations.has(locKey)) {
+                        seenLocations.add(locKey);
+                        markers.push({
+                            id: `emergency-${e.id}`,
+                            type: 'emergency',
+                            lat: Number(e.lat),
+                            lng: Number(e.lng),
+                            timestamp: e.created_at,
+                            isNew: newEventIds.has(`emergency-${e.id}`),
+                        });
+                    }
+                }
             }
         });
 
-        emergencyEvents.forEach((e) => {
+        sensorEvents.forEach((e) => {
             if (e.lat && e.lng) {
-                markers.push({
-                    id: `emergency-${e.id}`,
-                    type: 'emergency',
-                    lat: Number(e.lat),
-                    lng: Number(e.lng),
-                    timestamp: e.created_at,
-                    isNew: newEventIds.has(`emergency-${e.id}`),
-                });
+                const eventDate = new Date(e.created_at);
+                const isFocused = focusLocation && focusLocation[0] === Number(e.lat) && focusLocation[1] === Number(e.lng);
+                
+                if (eventDate >= twoMinutesAgo || isFocused) {
+                    const locKey = `S-${Number(e.lat).toFixed(5)}-${Number(e.lng).toFixed(5)}`;
+                    if (!seenLocations.has(locKey)) {
+                        seenLocations.add(locKey);
+                        markers.push({
+                            id: `sensor-${e.id}`,
+                            type: e.event,
+                            lat: Number(e.lat),
+                            lng: Number(e.lng),
+                            timestamp: e.created_at,
+                            isNew: newEventIds.has(`sensor-${e.id}`),
+                        });
+                    }
+                }
             }
         });
 
         return markers;
-    }, [sensorEvents, emergencyEvents, newEventIds]);
+    }, [sensorEvents, emergencyEvents, newEventIds, focusLocation]);
 
     return (
         <>
