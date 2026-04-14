@@ -40,7 +40,7 @@ class SendTelegramNotification implements ShouldQueue
         ]);
 
         if ($response->failed()) {
-            throw new \Exception('Telegram Error: ' . $response->body());
+            \Illuminate\Support\Facades\Log::error('Telegram Error: ' . $response->body());
         }
     }
 }

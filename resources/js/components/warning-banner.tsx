@@ -92,7 +92,7 @@ export function WarningBanner({ warnings, onDismiss }: WarningBannerProps) {
     if (warnings.length === 0) return null;
 
     return (
-        <div className="fixed top-4 right-4 z-50 flex w-96 flex-col gap-2">
+        <div className="fixed top-4 right-4 z-[9999] flex w-96 flex-col gap-2">
             {warnings.map((warning) => (
                 <WarningItemComponent key={warning.id} warning={warning} onDismiss={() => onDismiss(warning.id)} />
             ))}

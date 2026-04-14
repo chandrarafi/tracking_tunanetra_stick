@@ -44,6 +44,8 @@ type FilterType = 'all' | 'water' | 'fire' | 'emergency';
 
 export function EventLogTable({ sensorEvents, emergencyEvents, newEventIds = new Set(), onRowClick }: EventLogTableProps) {
     const [filter, setFilter] = useState<FilterType>('all');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
 
     // Combine and sort events
     const combinedEvents: CombinedEvent[] = [
@@ -66,13 +68,28 @@ export function EventLogTable({ sensorEvents, emergencyEvents, newEventIds = new
         })),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    const filteredEvents = filter === 'all' ? combinedEvents : combinedEvents.filter((e) => e.type === filter);
+    // First filter by date if selected
+    const dateFilteredEvents = (startDate || endDate)
+        ? combinedEvents.filter(e => {
+            const eventDate = new Date(e.created_at);
+            const yyyy = eventDate.getFullYear();
+            const mm = String(eventDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(eventDate.getDate()).padStart(2, '0');
+            const eventDateString = `${yyyy}-${mm}-${dd}`;
+            
+            if (startDate && eventDateString < startDate) return false;
+            if (endDate && eventDateString > endDate) return false;
+            return true;
+        }) 
+        : combinedEvents;
+
+    const filteredEvents = filter === 'all' ? dateFilteredEvents : dateFilteredEvents.filter((e) => e.type === filter);
 
     const filterButtons: { value: FilterType; label: string; count: number }[] = [
-        { value: 'all', label: 'Semua', count: combinedEvents.length },
-        { value: 'water', label: 'Water', count: combinedEvents.filter((e) => e.type === 'water').length },
-        { value: 'fire', label: 'Fire', count: combinedEvents.filter((e) => e.type === 'fire').length },
-        { value: 'emergency', label: 'Emergency', count: combinedEvents.filter((e) => e.type === 'emergency').length },
+        { value: 'all', label: 'Semua', count: dateFilteredEvents.length },
+        { value: 'water', label: 'Water', count: dateFilteredEvents.filter((e) => e.type === 'water').length },
+        { value: 'fire', label: 'Fire', count: dateFilteredEvents.filter((e) => e.type === 'fire').length },
+        { value: 'emergency', label: 'Emergency', count: dateFilteredEvents.filter((e) => e.type === 'emergency').length },
     ];
 
     const formatTime = (dateStr: string) => {
@@ -96,29 +113,60 @@ export function EventLogTable({ sensorEvents, emergencyEvents, newEventIds = new
             </div>
 
             {/* Filter */}
-            <div className="flex gap-2 border-b border-border/50 p-3">
-                {filterButtons.map((btn) => (
-                    <button
-                        key={btn.value}
-                        onClick={() => setFilter(btn.value)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
-                            filter === btn.value
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                        }`}
-                    >
-                        {btn.label}
-                        <span
-                            className={`ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+            <div className="flex flex-col gap-3 border-b border-border/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
+                    {filterButtons.map((btn) => (
+                        <button
+                            key={btn.value}
+                            onClick={() => setFilter(btn.value)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                                 filter === btn.value
-                                    ? 'bg-primary-foreground/20 text-primary-foreground'
-                                    : 'bg-muted text-muted-foreground'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                             }`}
                         >
-                            {btn.count}
-                        </span>
-                    </button>
-                ))}
+                            {btn.label}
+                            <span
+                                className={`ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                                    filter === btn.value
+                                        ? 'bg-primary-foreground/20 text-primary-foreground'
+                                        : 'bg-muted text-muted-foreground'
+                                }`}
+                            >
+                                {btn.count}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-2">
+                    <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                        Mulai:
+                    </label>
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-28 sm:w-auto"
+                    />
+                    <label className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-1">
+                        Sampai:
+                    </label>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="rounded-md border border-input bg-background px-2.5 py-1 text-xs shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-28 sm:w-auto"
+                    />
+                    {(startDate || endDate) && (
+                        <button
+                            onClick={() => { setStartDate(''); setEndDate(''); }}
+                            className="rounded-md px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-colors shrink-0"
+                        >
+                            Reset
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Table */}

@@ -163,14 +163,29 @@ export default function Dashboard({ sensorEvents: initialSensorEvents, emergency
         // Hitung batas waktu (2 menit yang lalu)
         const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
 
+        // Cari data dengan koordinat valid yang paling terbaru secara global (agar tidak terhapus durasi)
+        let latestEventTimestamp = 0;
+        const latestValidSensor = sensorEvents.find(e => e.lat && e.lng);
+        if (latestValidSensor) {
+            latestEventTimestamp = new Date(latestValidSensor.created_at).getTime();
+        }
+        const latestValidEmergency = emergencyEvents.find(e => e.lat && e.lng);
+        if (latestValidEmergency) {
+            const emergencyTime = new Date(latestValidEmergency.created_at).getTime();
+            if (emergencyTime > latestEventTimestamp) {
+                latestEventTimestamp = emergencyTime;
+            }
+        }
+
         // Process emergency events first so they take priority in drawing
         emergencyEvents.forEach((e) => {
             if (e.lat && e.lng) {
                 const eventDate = new Date(e.created_at);
                 const isFocused = focusLocation && focusLocation[0] === Number(e.lat) && focusLocation[1] === Number(e.lng);
+                const isLatest = eventDate.getTime() === latestEventTimestamp && latestEventTimestamp > 0;
                 
-                // Hanya tampilkan jika event berumur maksimal 2 menit, ATAU sedang di-klik (fokus) dari panel log
-                if (eventDate >= twoMinutesAgo || isFocused) {
+                // Hanya tampilkan jika event berumur maksimal 2 menit, ATAU sedang di-klik (fokus), ATAU merupakan data absolut paling baru
+                if (eventDate >= twoMinutesAgo || isFocused || isLatest) {
                     // Round to 5 decimal places (approx 1.1 meters) to dedup overlapping shadows
                     const locKey = `E-${Number(e.lat).toFixed(5)}-${Number(e.lng).toFixed(5)}`;
                     if (!seenLocations.has(locKey)) {
@@ -192,8 +207,9 @@ export default function Dashboard({ sensorEvents: initialSensorEvents, emergency
             if (e.lat && e.lng) {
                 const eventDate = new Date(e.created_at);
                 const isFocused = focusLocation && focusLocation[0] === Number(e.lat) && focusLocation[1] === Number(e.lng);
+                const isLatest = eventDate.getTime() === latestEventTimestamp && latestEventTimestamp > 0;
                 
-                if (eventDate >= twoMinutesAgo || isFocused) {
+                if (eventDate >= twoMinutesAgo || isFocused || isLatest) {
                     const locKey = `S-${Number(e.lat).toFixed(5)}-${Number(e.lng).toFixed(5)}`;
                     if (!seenLocations.has(locKey)) {
                         seenLocations.add(locKey);

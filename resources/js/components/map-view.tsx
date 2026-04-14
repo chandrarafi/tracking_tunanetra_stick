@@ -53,17 +53,31 @@ function FlyToLocation({ location }: { location: [number, number] | null }) {
 // Component that handles flying to new markers
 function FlyToLatest({ markers, isFocused }: { markers: MapMarker[], isFocused: boolean }) {
     const map = useMap();
-    const prevLengthRef = useRef(markers.length);
+    const latestIdRef = useRef<string | null>(null);
+    const isFirstMount = useRef(true);
 
     useEffect(() => {
-        if (markers.length > prevLengthRef.current) {
-            const latest = markers[0]; // Newest marker is at index 0 because we prepend it in Dashboard
-            if (latest && !isFocused) {
-                map.flyTo([latest.lat, latest.lng], 16, { duration: 1.5 });
+        if (markers.length > 0) {
+            // Find the marker with the newest timestamp
+            const latestMarker = markers.reduce((latest, current) => {
+                return new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest;
+            }, markers[0]);
+
+            if (isFirstMount.current) {
+                latestIdRef.current = latestMarker.id;
+                isFirstMount.current = false;
+                return;
             }
+
+            // If we have a new latest marker that we haven't flown to yet
+            if (latestMarker && latestMarker.id !== latestIdRef.current) {
+                map.flyTo([latestMarker.lat, latestMarker.lng], 16, { duration: 1.5 });
+                latestIdRef.current = latestMarker.id;
+            }
+        } else {
+            isFirstMount.current = false;
         }
-        prevLengthRef.current = markers.length;
-    }, [markers, map, isFocused]);
+    }, [markers, map]);
 
     return null;
 }
